@@ -25,8 +25,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   _handleActiveBands(dynamic payload) {
-    this.bands = (payload as List).map((band) => Band.fromMap(band)).toList();
-
+    bands = (payload as List).map((band) => Band.fromMap(band)).toList();
     setState(() {});
   }
 
@@ -67,17 +66,24 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-          child: const Icon(Icons.add), elevation: 1, onPressed: addNewBand),
+        child: const Icon(Icons.add),
+        elevation: 1,
+        onPressed: addNewBand,
+      ),
     );
   }
 
   Widget _bandTile(Band band) {
     final socketService = Provider.of<SocketService>(context, listen: false);
-
+    print(band);
     return Dismissible(
       key: Key(band.id),
       direction: DismissDirection.startToEnd,
-      onDismissed: (_) => socketService.emit('delete-band', {'id': band.id}),
+      onDismissed: (_) {
+        socketService.emit('delete-band', {'id': band.id});
+        bands.remove(band);
+        setState(() {});
+      },
       background: Container(
           padding: const EdgeInsets.only(left: 8.0),
           color: Colors.red,
@@ -87,12 +93,12 @@ class _HomePageState extends State<HomePage> {
           )),
       child: ListTile(
         leading: CircleAvatar(
-          child: Text(band.name.substring(0, 2)),
           backgroundColor: Colors.blue[100],
+          child: Text(band.name.substring(0, 2)),
         ),
         title: Text(band.name),
         trailing: Text('${band.votes}', style: const TextStyle(fontSize: 20)),
-        onTap: () => socketService.socket.emit('vote-band', {'id': band.id}),
+        onTap: () => socketService.emit('vote-band', {'id': band.id}),
       ),
     );
   }
@@ -100,43 +106,58 @@ class _HomePageState extends State<HomePage> {
   addNewBand() {
     final textController = TextEditingController();
 
-    if (Platform.isAndroid) {
-      // Android
-      return showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-                title: const Text('New band name:'),
-                content: TextField(
-                  controller: textController,
-                ),
-                actions: [
-                  MaterialButton(
-                      child: const Text('Add'),
-                      elevation: 5,
-                      textColor: Colors.blue,
-                      onPressed: () => addBandToList(textController.text))
-                ],
-              ));
-    }
-
-    showCupertinoDialog(
+    // if (Platform.isAndroid) {
+    //   // Android
+    //   return showDialog(
+    //       context: context,
+    //       builder: (_) => AlertDialog(
+    //             title: const Text('New band name:'),
+    //             content: TextField(
+    //               controller: textController,
+    //             ),
+    //             actions: [
+    //               MaterialButton(
+    //                   child: const Text('Add'),
+    //                   elevation: 5,
+    //                   textColor: Colors.blue,
+    //                   onPressed: () => addBandToList(textController.text))
+    //             ],
+    //           ));
+    // }
+    return showDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (_) => AlertDialog(
               title: const Text('New band name:'),
-              content: CupertinoTextField(
+              content: TextField(
                 controller: textController,
               ),
               actions: [
-                CupertinoDialogAction(
-                    isDefaultAction: true,
+                MaterialButton(
                     child: const Text('Add'),
-                    onPressed: () => addBandToList(textController.text)),
-                CupertinoDialogAction(
-                    isDestructiveAction: true,
-                    child: const Text('Dismiss'),
-                    onPressed: () => Navigator.pop(context))
+                    elevation: 5,
+                    textColor: Colors.blue,
+                    onPressed: () => addBandToList(textController.text))
               ],
             ));
+
+    // showCupertinoDialog(
+    //     context: context,
+    //     builder: (_) => CupertinoAlertDialog(
+    //           title: const Text('New band name:'),
+    //           content: CupertinoTextField(
+    //             controller: textController,
+    //           ),
+    //           actions: [
+    //             CupertinoDialogAction(
+    //                 isDefaultAction: true,
+    //                 child: const Text('Add'),
+    //                 onPressed: () => addBandToList(textController.text)),
+    //             CupertinoDialogAction(
+    //                 isDestructiveAction: true,
+    //                 child: const Text('Dismiss'),
+    //                 onPressed: () => Navigator.pop(context))
+    //           ],
+    //         ));
   }
 
   void addBandToList(String name) {
