@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pie_chart/pie_chart.dart';
@@ -12,13 +15,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Band> bands = [];
-  // String? voterName; // variable para guardar el nombre del votante
   final voterNameController = TextEditingController();
   bool enabled = true;
 
   @override
   void initState() {
     final socketService = Provider.of<SocketService>(context, listen: false);
+
     socketService.socket.on('active-bands', _handleActiveBands);
     super.initState();
   }
@@ -41,10 +44,11 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BandNames', style: TextStyle(color: Colors.black87)),
+        title:
+            const Text('Votaciones', style: TextStyle(color: Colors.black87)),
         backgroundColor: Colors.white,
         elevation: 1,
-        actions: [
+        actions: <Widget>[
           Container(
             margin: const EdgeInsets.only(right: 10),
             child: (socketService.serverStatus == ServerStatus.Online)
@@ -53,26 +57,45 @@ class _HomePageState extends State<HomePage> {
           )
         ],
       ),
-      body: Column(
-        children: [
-          _showGraph(),
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: TextField(
-              enabled: enabled,
-              controller: voterNameController,
-              decoration: InputDecoration(labelText: "Ingrese su nombre"),
+      body: socketService.serverStatus == ServerStatus.Offline
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("No hay conexión con el servidor"),
+                  SizedBox(height: 10),
+                  MaterialButton(
+                    minWidth: 200.0,
+                    height: 40.0,
+                    onPressed: () {
+                      socketService.socket.connect();
+                    },
+                    color: Colors.lightBlue,
+                    child: Text('Reconectar',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                _showGraph(),
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: TextField(
+                    enabled: enabled,
+                    controller: voterNameController,
+                    decoration: InputDecoration(labelText: "Ingrese su nombre"),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: bands.length,
+                      itemBuilder: (context, i) => _bandTile(bands[i])),
+                )
+              ],
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: bands.length,
-                itemBuilder: (context, i) => _bandTile(bands[i])),
-          )
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
@@ -81,17 +104,19 @@ class _HomePageState extends State<HomePage> {
           children: [
             // Botón para eliminar voto
             FloatingActionButton(
+                elevation: 1,
                 child: const Text(
                   "Eliminar votante",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 10),
                 ),
                 onPressed: () =>
-                    _deleteVoter(voterNameController.text.toLowerCase())),
+                    deleteVoter(voterNameController.text.toLowerCase())),
             const SizedBox(width: 20),
             FloatingActionButton(
+              elevation: 1,
               child: Icon(Icons.refresh),
-              onPressed: _resetVotes,
+              onPressed: resetVotes,
             ),
             const SizedBox(width: 20),
             FloatingActionButton(
@@ -145,6 +170,25 @@ class _HomePageState extends State<HomePage> {
 
   addNewBand() {
     final textController = TextEditingController();
+
+    // if (Platform.isAndroid) {
+    //   // Android
+    //   return showDialog(
+    //       context: context,
+    //       builder: (_) => AlertDialog(
+    //             title: const Text('New band name:'),
+    //             content: TextField(
+    //               controller: textController,
+    //             ),
+    //             actions: [
+    //               MaterialButton(
+    //                   child: const Text('Add'),
+    //                   elevation: 5,
+    //                   textColor: Colors.blue,
+    //                   onPressed: () => addBandToList(textController.text))
+    //             ],
+    //           ));
+    // }
     return showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -184,7 +228,7 @@ class _HomePageState extends State<HomePage> {
   void addBandToList(String name) {
     if (name.length > 1) {
       final socketService = Provider.of<SocketService>(context, listen: false);
-      socketService.emit('add-band', {'name': name.toLowerCase()});
+      socketService.emit('add-band', {'name': name});
     }
 
     Navigator.pop(context);
@@ -199,21 +243,25 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _resetVotes() {
+  void resetVotes() {
     final socketService = Provider.of<SocketService>(context, listen: false);
     socketService.emit('reset-votes');
   }
 
-  _deleteVoter(String voterName) {
+  deleteVoter(String voterName) {
     final socketService = Provider.of<SocketService>(context, listen: false);
     // Emitir evento al servidor para eliminar votante
     socketService.emit('delete-voter', voterName);
     voterNameController.clear();
+    enabled = true;
+    setState(() {});
   }
 
   void resetVoters() {
     final socketService = Provider.of<SocketService>(context, listen: false);
     socketService.emit('delete-all-voters');
+    enabled = true;
+    setState(() {});
   }
 
   // Mostrar gráfica
