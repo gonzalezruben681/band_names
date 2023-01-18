@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:band_names/services/notification_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -155,7 +156,8 @@ class _HomePageState extends State<HomePage> {
           color: Colors.red,
           child: const Align(
             alignment: Alignment.centerLeft,
-            child: Text('Delete Band', style: TextStyle(color: Colors.white)),
+            child:
+                Text('Borrar candidato', style: TextStyle(color: Colors.white)),
           )),
       child: ListTile(
           leading: CircleAvatar(
@@ -192,7 +194,7 @@ class _HomePageState extends State<HomePage> {
     return showDialog(
         context: context,
         builder: (_) => AlertDialog(
-              title: const Text('New band name:'),
+              title: const Text('Nuevo candidado:'),
               content: TextField(
                 controller: textController,
               ),
@@ -241,6 +243,10 @@ class _HomePageState extends State<HomePage> {
       socketService.emit(
           'vote-band', {'id': band.id, 'voterName': voterName.toLowerCase()});
     }
+    socketService.socket.on(
+        "vote-error",
+        (data) => NotificationSocketService.handleNotification(
+            context: context, message: data, color: Colors.red[400]));
   }
 
   void resetVotes() {
