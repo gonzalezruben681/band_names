@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:band_names/services/notification_service.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pie_chart/pie_chart.dart';
 
+import 'package:band_names/services/notification_service.dart';
 import 'package:band_names/models/band.dart';
 import 'package:band_names/services/socket_service.dart';
 
@@ -144,30 +144,31 @@ class _HomePageState extends State<HomePage> {
   Widget _bandTile(Band band) {
     final socketService = Provider.of<SocketService>(context, listen: false);
     return Dismissible(
-      key: Key(band.id),
-      direction: DismissDirection.startToEnd,
-      onDismissed: (_) {
-        socketService.emit('delete-band', {'id': band.id});
-        bands.remove(band);
-        setState(() {});
-      },
-      background: Container(
-          padding: const EdgeInsets.only(left: 8.0),
-          color: Colors.red,
-          child: const Align(
-            alignment: Alignment.centerLeft,
-            child:
-                Text('Borrar candidato', style: TextStyle(color: Colors.white)),
-          )),
-      child: ListTile(
+        key: Key(band.id),
+        direction: DismissDirection.startToEnd,
+        onDismissed: (_) {
+          socketService.emit('delete-band', {'id': band.id});
+          bands.remove(band);
+          setState(() {});
+        },
+        background: Container(
+            padding: const EdgeInsets.only(left: 8.0),
+            color: Colors.red,
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Borrar candidato',
+                  style: TextStyle(color: Colors.white)),
+            )),
+        child: ListTile(
           leading: CircleAvatar(
             backgroundColor: Colors.blue[100],
             child: Text(band.name.substring(0, 2)),
           ),
           title: Text(band.name),
           trailing: Text('${band.votes}', style: const TextStyle(fontSize: 20)),
-          onTap: () => addVotante(voterNameController.text, band)),
-    );
+          onTap:
+              enabled ? () => addVotante(voterNameController.text, band) : null,
+        ));
   }
 
   addNewBand() {
@@ -242,11 +243,12 @@ class _HomePageState extends State<HomePage> {
       enabled = false;
       socketService.emit(
           'vote-band', {'id': band.id, 'voterName': voterName.toLowerCase()});
+      setState(() {});
     }
-    socketService.socket.on(
-        "vote-error",
-        (data) => NotificationSocketService.handleNotification(
-            context: context, message: data, color: Colors.red[400]));
+    socketService.socket.on("vote-error", (data) {
+      NotificationSocketService.handleNotification(
+          context: context, message: data, color: Colors.red[400]);
+    });
   }
 
   void resetVotes() {
