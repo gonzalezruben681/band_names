@@ -1,6 +1,7 @@
-import 'dart:io';
+// import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
+// import 'package:flutter/cupertino.dart';
+import 'package:band_names/models/votante.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pie_chart/pie_chart.dart';
@@ -16,6 +17,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Band> bands = [];
+  List<Votante> votantes = [];
   final voterNameController = TextEditingController();
   bool enabled = true;
 
@@ -24,11 +26,19 @@ class _HomePageState extends State<HomePage> {
     final socketService = Provider.of<SocketService>(context, listen: false);
 
     socketService.socket.on('active-bands', _handleActiveBands);
+    socketService.socket.on('active-voter', _handleVoter);
     super.initState();
   }
 
   _handleActiveBands(dynamic payload) {
     bands = (payload as List).map((band) => Band.fromMap(band)).toList();
+    setState(() {});
+  }
+
+  _handleVoter(dynamic payload) {
+    votantes =
+        (payload as List).map((voter) => Votante.fromMap(voter)).toList();
+    print(votantes);
     setState(() {});
   }
 
@@ -63,8 +73,8 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("No hay conexión con el servidor"),
-                  SizedBox(height: 10),
+                  const Text("No hay conexión con el servidor"),
+                  const SizedBox(height: 10),
                   MaterialButton(
                     minWidth: 200.0,
                     height: 40.0,
@@ -72,7 +82,7 @@ class _HomePageState extends State<HomePage> {
                       socketService.socket.connect();
                     },
                     color: Colors.lightBlue,
-                    child: Text('Reconectar',
+                    child: const Text('Reconectar',
                         style: TextStyle(color: Colors.white)),
                   ),
                 ],
@@ -82,11 +92,12 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _showGraph(),
                 Padding(
-                  padding: EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(8.0),
                   child: TextField(
                     enabled: enabled,
                     controller: voterNameController,
-                    decoration: InputDecoration(labelText: "Ingrese su nombre"),
+                    decoration:
+                        const InputDecoration(labelText: "Ingrese su nombre"),
                   ),
                 ),
                 Expanded(
@@ -104,33 +115,40 @@ class _HomePageState extends State<HomePage> {
           // crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             // Botón para eliminar voto
-            FloatingActionButton(
-                elevation: 1,
-                child: const Text(
-                  "Eliminar votante",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 10),
-                ),
-                onPressed: () =>
-                    deleteVoter(voterNameController.text.toLowerCase())),
-            const SizedBox(width: 20),
+            // FloatingActionButton(
+            //     elevation: 1,
+            //     child: const Text(
+            //       "Eliminar votante",
+            //       textAlign: TextAlign.center,
+            //       style: TextStyle(fontSize: 10),
+            //     ),
+            //     onPressed: () =>
+            //         deleteVoter(votantes, voterNameController.text)),
+            // const SizedBox(width: 20),
+            // FloatingActionButton(
+            //   elevation: 1,
+            //   onPressed: resetVotes,
+            //   child: const Icon(Icons.refresh),
+            // ),
+            // const SizedBox(width: 20),
             FloatingActionButton(
               elevation: 1,
-              child: Icon(Icons.refresh),
-              onPressed: resetVotes,
+              onPressed: () =>
+                  resetCampos(votantes, voterNameController.text.trim()),
+              child: const Icon(Icons.refresh_outlined),
             ),
             const SizedBox(width: 20),
             FloatingActionButton(
-              child: const Icon(Icons.add),
               elevation: 1,
               onPressed: addNewBand,
+              child: const Icon(Icons.add),
             ),
             const SizedBox(width: 20),
             FloatingActionButton(
               elevation: 1,
               onPressed: resetVoters,
               child: const Text(
-                "Eliminar votantes",
+                "Restaurar votación",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 10),
               ),
@@ -174,24 +192,6 @@ class _HomePageState extends State<HomePage> {
   addNewBand() {
     final textController = TextEditingController();
 
-    // if (Platform.isAndroid) {
-    //   // Android
-    //   return showDialog(
-    //       context: context,
-    //       builder: (_) => AlertDialog(
-    //             title: const Text('New band name:'),
-    //             content: TextField(
-    //               controller: textController,
-    //             ),
-    //             actions: [
-    //               MaterialButton(
-    //                   child: const Text('Add'),
-    //                   elevation: 5,
-    //                   textColor: Colors.blue,
-    //                   onPressed: () => addBandToList(textController.text))
-    //             ],
-    //           ));
-    // }
     return showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -201,31 +201,12 @@ class _HomePageState extends State<HomePage> {
               ),
               actions: [
                 MaterialButton(
-                    child: const Text('Add'),
                     elevation: 5,
                     textColor: Colors.blue,
-                    onPressed: () => addBandToList(textController.text))
+                    onPressed: () => addBandToList(textController.text),
+                    child: const Text('Add'))
               ],
             ));
-
-    // showCupertinoDialog(
-    //     context: context,
-    //     builder: (_) => CupertinoAlertDialog(
-    //           title: const Text('New band name:'),
-    //           content: CupertinoTextField(
-    //             controller: textController,
-    //           ),
-    //           actions: [
-    //             CupertinoDialogAction(
-    //                 isDefaultAction: true,
-    //                 child: const Text('Add'),
-    //                 onPressed: () => addBandToList(textController.text)),
-    //             CupertinoDialogAction(
-    //                 isDestructiveAction: true,
-    //                 child: const Text('Dismiss'),
-    //                 onPressed: () => Navigator.pop(context))
-    //           ],
-    //         ));
   }
 
   void addBandToList(String name) {
@@ -241,8 +222,8 @@ class _HomePageState extends State<HomePage> {
     final socketService = Provider.of<SocketService>(context, listen: false);
     if (voterName.length > 1) {
       enabled = false;
-      socketService.emit(
-          'vote-band', {'id': band.id, 'voterName': voterName.toLowerCase()});
+      socketService.emit('vote-band',
+          {'id': band.id, 'voterName': voterName.toLowerCase().trim()});
       setState(() {});
     }
     socketService.socket.on("vote-error", (data) {
@@ -251,23 +232,50 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void resetCampos(List<Votante> votantes, String voter) {
+    // final votante = votantes.any((votante) => votante.name == voter);
+    // print("hola ${votante}");
+    // if (votante) {
+    //   print("hola");
+    // } else {
+    //   enabled = true;
+    //   setState(() {});
+    //   print('adios');
+    // }
+
+    if (votantes.isEmpty) {
+      enabled = true;
+      setState(() {});
+    }
+  }
+
   void resetVotes() {
     final socketService = Provider.of<SocketService>(context, listen: false);
     socketService.emit('reset-votes');
   }
 
-  deleteVoter(String voterName) {
+  void deleteVoter(List<Votante> votante, String voter) {
     final socketService = Provider.of<SocketService>(context, listen: false);
-    // Emitir evento al servidor para eliminar votante
-    socketService.emit('delete-voter', voterName);
-    voterNameController.clear();
-    enabled = true;
-    setState(() {});
+
+    for (var votante in votantes) {
+      if (votante.name == voter.toLowerCase().trim()) {
+        socketService.emit('delete-voter', votante.name);
+        votantes.remove(votante);
+        break;
+      }
+    }
+
+    socketService.socket.on("voter-deleted", (data) {
+      // print(data == voterNameController.text);
+      print(data);
+    });
   }
 
   void resetVoters() {
     final socketService = Provider.of<SocketService>(context, listen: false);
     socketService.emit('delete-all-voters');
+    socketService.emit('reset-votes');
+    print('borrado de voters');
     enabled = true;
     setState(() {});
   }
