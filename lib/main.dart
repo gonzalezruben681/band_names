@@ -1,4 +1,5 @@
-import 'package:band_names/pages/status.dart';
+import 'package:band_names/pages/add_band_category.dart';
+import 'package:band_names/pages/home_prueba.dart';
 import 'package:band_names/services/socket_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,10 +21,11 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Votaciones ',
-        initialRoute: 'home',
+        initialRoute: 'prueba',
         routes: {
           'home': (context) => HomePage(),
-          'status': (context) => StatusPage()
+          'prueba': (context) => HomePagePrueba(),
+          'addband': (context) => AddBandPage(),
         },
       ),
     );

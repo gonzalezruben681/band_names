@@ -1,6 +1,7 @@
 // import 'dart:io';
 
 // import 'package:flutter/cupertino.dart';
+import 'package:band_names/models/category.dart';
 import 'package:band_names/models/votante.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,16 +11,18 @@ import 'package:band_names/services/notification_service.dart';
 import 'package:band_names/models/band.dart';
 import 'package:band_names/services/socket_service.dart';
 
-class HomePage extends StatefulWidget {
+class HomePagePrueba extends StatefulWidget {
   @override
-  _HomePageState createState() => _HomePageState();
+  _HomePagePruebaState createState() => _HomePagePruebaState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePagePruebaState extends State<HomePagePrueba> {
   List<Band> bands = [];
   List<Votante> votantes = [];
+  List<Category> categories = [];
   final voterNameController = TextEditingController();
   bool enabled = true;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -27,6 +30,8 @@ class _HomePageState extends State<HomePage> {
 
     socketService.socket.on('active-bands', _handleActiveBands);
     socketService.socket.on('active-voter', _handleVoter);
+    socketService.socket.on("categories", _handleCategories);
+    socketService.emit("get-categories");
     super.initState();
   }
 
@@ -42,12 +47,20 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  @override
-  void dispose() {
-    final socketService = Provider.of<SocketService>(context, listen: false);
-    socketService.socket.off('active-bands');
-    super.dispose();
+  _handleCategories(dynamic payload) {
+    categories = (payload as List)
+        .map((category) => Category.fromJson(category))
+        .toList();
+    setState(() {});
+    _selectedCategory = categories.first.id;
   }
+
+  // @override
+  // void dispose() {
+  //   final socketService = Provider.of<SocketService>(context, listen: false);
+  //   socketService.socket.off('active-bands');
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -92,6 +105,24 @@ class _HomePageState extends State<HomePage> {
           // :
           Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButton(
+              value: _selectedCategory,
+              items: categories.map((category) {
+                return DropdownMenuItem(
+                  value: category.id,
+                  child: Text(category.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategory = value;
+                });
+              },
+              hint: const Text("Selecciona una categoría"),
+            ),
+          ),
           _showGraph(),
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -105,39 +136,50 @@ class _HomePageState extends State<HomePage> {
             child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: bands.length,
-                itemBuilder: (context, i) => _bandTile(bands[i])),
-          )
+                itemBuilder: (context, i) {
+                  final band = bands[i];
+                  if (_selectedCategory == null ||
+                      band.category == _selectedCategory) {
+                    return _bandTile(band);
+                  }
+                  return Container();
+                }),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 60,
+                  child: MaterialButton(
+                    elevation: 1,
+                    onPressed: () =>
+                        resetCampos(votantes, voterNameController.text.trim()),
+                    child: const Icon(Icons.refresh_outlined),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                MaterialButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, 'addband');
+                  },
+                  child: Text("Agregar candidato"),
+                ),
+                const SizedBox(width: 10),
+                MaterialButton(
+                  elevation: 1,
+                  onPressed: resetVoters,
+                  child: const Text(
+                    "Restaurar votos",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FloatingActionButton(
-              elevation: 1,
-              onPressed: () =>
-                  resetCampos(votantes, voterNameController.text.trim()),
-              child: const Icon(Icons.refresh_outlined),
-            ),
-            const SizedBox(width: 20),
-            FloatingActionButton(
-              elevation: 1,
-              onPressed: addNewBand,
-              child: const Icon(Icons.add),
-            ),
-            const SizedBox(width: 20),
-            FloatingActionButton(
-              elevation: 1,
-              onPressed: resetVoters,
-              child: const Text(
-                "Restaurar votación",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 10),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -275,9 +317,13 @@ class _HomePageState extends State<HomePage> {
 
   // Mostrar gráfica
   Widget _showGraph() {
+    String category = _selectedCategory ?? ''; // la categoría seleccionada
+
     Map<String, double> dataMap = {};
     for (var band in bands) {
-      dataMap.putIfAbsent(band.name, () => band.votes!.toDouble());
+      if (band.category == category) {
+        dataMap.putIfAbsent(band.name, () => band.votes!.toDouble());
+      }
     }
 
     if (dataMap.isNotEmpty) {
